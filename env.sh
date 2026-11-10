@@ -11,12 +11,12 @@ export REPO_URL="https://github.com/DuncanDoyle/kgateway-argocd-healthchecks.git
 export REPO_REVISION="HEAD"
 
 # --- pinned external artifacts --------------------------------------------
-# Gateway API CRDs. kgateway 2.4.x is built against v1.6.1; no kgateway
+# Gateway API CRDs. kgateway 2.5.x is built against v1.7.0; no kgateway
 # chart bundles these, so they must be applied first.
-export GWAPI_VERSION="v1.6.1"
+export GWAPI_VERSION="v1.7.0"
 export GWAPI_MANIFEST="https://github.com/kubernetes-sigs/gateway-api/releases/download/${GWAPI_VERSION}/standard-install.yaml"
 
-export KGATEWAY_VERSION="v2.4.5"
+export KGATEWAY_VERSION="v2.5.1"
 export KGATEWAY_CRDS_CHART="oci://cr.kgateway.dev/kgateway-dev/charts/kgateway-crds"
 export KGATEWAY_CHART="oci://cr.kgateway.dev/kgateway-dev/charts/kgateway"
 

@@ -1,6 +1,12 @@
-# Coverage probe: observed status on kgateway v2.4.5
+# Coverage probe: observed status on kgateway v2.4.5 and v2.5.1
 
-Everything below was observed on the live cluster (minikube `kgw-argocd`), not predicted. `GatewayExtension` is out of scope (writes no status on v2.4.5). Manifests are in `manifests/coverage/`; the Application is `argocd/app-coverage.yaml`.
+Everything below was observed on a live cluster, not predicted. The probe ran on v2.4.5 (minikube `kgw-argocd`) and was repeated on v2.5.1 (minikube `kgw-argocd-25`). `GatewayExtension` is out of scope: it writes no status on either version (re-checked on v2.5.1 with a valid and an invalid instance). Manifests are in `manifests/coverage/`; the Application is `argocd/app-coverage.yaml`.
+
+## What changed on v2.5.1
+
+One behaviour changed. A policy whose target does not exist now gets a synthetic `StatusSummary` ancestor with `Accepted=False/TargetNotFound` and `Attached=False/TargetNotFound` (message e.g. "Gateway httpbin/no-such-gateway not found"). On v2.4.5 it got no `status` at all. The health check therefore reports **Degraded** on v2.5.x and **Progressing** on v2.4.x. Both are tested: `target_missing.yaml` is the v2.5.1 capture, `target_missing_v2_4.yaml` the v2.4.5 one.
+
+The other 10 live captures came back byte-identical, apart from volatile fields. `lp-target-missing` was named `lp-unattached` during the v2.4.5 probe; the sections below use the current name.
 
 ## CRD spec fields (Step 1)
 
@@ -13,7 +19,7 @@ Everything below was observed on the live cluster (minikube `kgw-argocd`), not p
 | Resource | Predicted | Observed |
 |---|---|---|
 | ListenerPolicy `lp-healthy` | Accepted+Attached True | As predicted. Ancestor Gateway `httpbin/demo-gateway`. |
-| ListenerPolicy `lp-unattached` (targets nonexistent Gateway) | No status | **No `status` field at all**, still none after 60s+. |
+| ListenerPolicy `lp-target-missing` (targets nonexistent Gateway) | No status | **No `status` field at all**, still none after 60s+. (v2.5.1: `Accepted=False/TargetNotFound`, see above.) |
 | ListenerPolicy `lp-degraded-ca` (caCertificateRefs to a missing ConfigMap) | Degraded | **Not Degraded**: `Accepted=True/Valid`, `Attached=True/Attached`. |
 | ListenerPolicy `lp-degraded-accesslog` (accessLog grpcService backendRef to a missing Service) | Degraded | **Degraded**: `Accepted=False/Invalid` ("unresolved backend reference: Service httpbin/no-such-log-service not found"), `Attached=False/Pending` (empty message). Ancestor Gateway `coverage-gateway-log`. |
 | BackendConfigPolicy `bcp-healthy` | Accepted+Attached True | As predicted. Ancestor is the **Backend** `httpbin/coverage-backend` (`group: gateway.kgateway.dev`), not a Gateway. |
@@ -35,7 +41,7 @@ All three write `status.ancestors[]` with `controllerName: kgateway.dev/kgateway
    - The error is per target, not per policy: `bcp-healthy` stays Accepted+Attached True while `coverage-backend` itself is `Accepted=False/Invalid` because of its sibling.
 2. **Contrast between two reference fields.** A missing Secret in BackendConfigPolicy `tls.secretRef` and a missing Service in ListenerPolicy `accessLog[].grpcService.backendRef` are rejected (`Invalid`). A missing ConfigMap in ListenerPolicy `clientCertificateValidation.caCertificateRefs` is **accepted** (`Valid`/`Attached`). Two reference-type fields, two behaviours. Whether that is a kgateway bug is not decided here.
 3. **Port 8082 is reserved by kgateway.** A Gateway listener on 8082 came out `Programmed=False/Invalid` with `invalid port 8082 in listener: port is reserved`; a ListenerPolicy targeting it got no status at all. Avoid 8082 in any extension of this demo.
-4. **Unattached and unreferenced resources get no status** (`lp-unattached`, `dr-unreferenced`): the controller writes ancestors only once something attaches. That looks correct, not a bug. The health script must treat an absent status as Progressing.
+4. **Unattached and unreferenced resources get no status** (`lp-target-missing`, `dr-unreferenced`): the controller writes ancestors only once something attaches. That looks correct, not a bug. The health script must treat an absent status as Progressing. On v2.5.1 this still holds for `dr-unreferenced`, but a missing policy target now reports `TargetNotFound`.
 5. **Degraded is reachable for ListenerPolicy** (accesslog backendRef) and BackendConfigPolicy. For DirectResponse, no Degraded was reached with the single mechanism tried.
 6. **`kgw-coverage` is Synced/Degraded**, not Healthy. The Degraded comes from the *existing* Backend and Gateway health checks seeing `Backend/coverage-backend` (policy error) and `Gateway/coverage-gateway-log` (policy error). The three new kinds have no health check yet and show blank health (`BackendConfigPolicy`, `DirectResponse`, `ListenerPolicy` resources all have empty health in the Application resource list). `kgw-demo` is Synced/Healthy; `kgw-scenarios` is Synced/Degraded.
 
@@ -45,7 +51,7 @@ Name each fixture file after the state actually captured. Capture the **policy**
 
 | Kind | Healthy fixture, from | Degraded fixture, from | No-status fixture, from |
 |---|---|---|---|
-| ListenerPolicy | `httpbin/lp-healthy` | `httpbin/lp-degraded-accesslog` (NOT `lp-degraded-ca`, which is Accepted/Valid) | `httpbin/lp-unattached` |
+| ListenerPolicy | `httpbin/lp-healthy` | `httpbin/lp-degraded-accesslog` (NOT `lp-degraded-ca`, which is Accepted/Valid) | `httpbin/lp-target-missing` |
 | BackendConfigPolicy | `httpbin/bcp-healthy` | `httpbin/bcp-degraded` (the policy; `Backend/coverage-backend` carries the surfaced error but is a Backend-kind fixture, not a BackendConfigPolicy one) | none observed |
 | DirectResponse | `httpbin/dr-healthy` | none reachable | `httpbin/dr-unreferenced` |
 
@@ -78,9 +84,9 @@ status:
     controllerName: kgateway.dev/kgateway
 ```
 
-### listenerpolicy/lp-unattached
+### listenerpolicy/lp-target-missing
 ```yaml
-# (no status field)
+# (no status field on v2.4.5; see testdata/target_missing.yaml for v2.5.1)
 ```
 
 ### listenerpolicy/lp-degraded-ca

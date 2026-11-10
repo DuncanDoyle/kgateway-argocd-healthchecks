@@ -1,0 +1,36 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: TrafficPolicy
+metadata:
+  generation: 1
+  name: tp-target-missing
+  namespace: scenarios
+spec:
+  headerModifiers:
+    request:
+      set:
+        - name: X-Never-Applied
+          value: "true"
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: no-such-route
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.kgateway.dev
+        kind: StatusSummary
+        name: StatusSummary
+      conditions:
+        - lastTransitionTime: "2026-11-10T16:31:11Z"
+          message: HTTPRoute scenarios/no-such-route not found
+          observedGeneration: 1
+          reason: TargetNotFound
+          status: "False"
+          type: Accepted
+        - lastTransitionTime: "2026-11-10T16:31:11Z"
+          message: Policy is not attached to targets that could not be resolved
+          observedGeneration: 1
+          reason: TargetNotFound
+          status: "False"
+          type: Attached
+      controllerName: kgateway.dev/kgateway

@@ -1,0 +1,31 @@
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: ListenerPolicy
+metadata:
+  generation: 1
+  name: lp-target-missing
+  namespace: httpbin
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: no-such-gateway
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.kgateway.dev
+        kind: StatusSummary
+        name: StatusSummary
+      conditions:
+        - lastTransitionTime: "2026-11-10T16:31:11Z"
+          message: Gateway httpbin/no-such-gateway not found
+          observedGeneration: 1
+          reason: TargetNotFound
+          status: "False"
+          type: Accepted
+        - lastTransitionTime: "2026-11-10T16:31:11Z"
+          message: Policy is not attached to targets that could not be resolved
+          observedGeneration: 1
+          reason: TargetNotFound
+          status: "False"
+          type: Attached
+      controllerName: kgateway.dev/kgateway

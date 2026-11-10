@@ -7,11 +7,16 @@ tests:
     status: Degraded
     message: 'unresolved backend reference: Service httpbin/no-such-log-service not found'
   inputPath: testdata/degraded.yaml
-# A policy whose target does not exist gets no status at all.
+# Target does not exist. v2.5.x reports it as Accepted=False/TargetNotFound on a
+# synthetic StatusSummary ancestor; v2.4.x writes no status at all.
+- healthStatus:
+    status: Degraded
+    message: "Gateway httpbin/no-such-gateway not found"
+  inputPath: testdata/target_missing.yaml
 - healthStatus:
     status: Progressing
     message: "Waiting for ListenerPolicy status"
-  inputPath: testdata/no_status.yaml
+  inputPath: testdata/target_missing_v2_4.yaml
 # The foreign ancestor is Invalid but owned by another controller, so the
 # result must be identical to healthy.yaml.
 - healthStatus:

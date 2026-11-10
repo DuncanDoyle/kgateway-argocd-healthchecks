@@ -12,17 +12,19 @@
 #     since out/ is gitignored and regenerated. Re-run this script any time the
 #     live cluster's status for these resources changes and you want the
 #     tracked fixtures to reflect it.
-#   - The other 9 of the 21 fixtures are never written by this script:
+#   - The other 11 of the 23 fixtures are never written by this script:
 #       * 7 DERIVED/asserted: Backend/no_status, ListenerPolicy/
 #         foreign_controller, TrafficPolicy/{stale,foreign_controller,
 #         overridden,overridden_empty_message,partially_valid}.
 #       * 1 hand-captured: Backend/stale, a real capture taken mid-probe that
 #         cannot be reproduced on demand.
+#       * 2 captured on kgateway v2.4.5: {TrafficPolicy,ListenerPolicy}/
+#         target_missing_v2_4, kept so the v2.4.x no-status path stays tested.
 #       * 1 SYNTHETIC: TrafficPolicy/wrong_shape, a state kgateway never
 #         produces.
 #     See each file's own header comment for exactly what was substituted. They
 #     cannot be reproduced by capturing a live resource, and this script NEVER
-#     writes those nine filenames -- only the 12 named in the `extract` calls
+#     writes those eleven filenames -- only the 12 named in the `extract` calls
 #     below -- so a re-run cannot silently destroy them.
 #
 # Strips managedFields/uid/resourceVersion/creationTimestamp/annotations --
@@ -117,9 +119,9 @@ extract() {
     mv "${target}.tmp" "$target"
   fi
 
-  # An ABSENT status is a legitimate state (e.g. tp-progressing): a policy
-  # that attaches to nothing never gets a status subresource written at
-  # all -- not an empty ancestors list. Just record it; the set is checked
+  # An ABSENT status is a legitimate state (e.g. dr-unreferenced): an object
+  # nothing references may never get a status subresource written at all --
+  # not an empty list. Just record it; the set is checked
   # against EXPECT_NO_STATUS once every capture is in, which is a real
   # assertion rather than a line a reader has to count.
   if ! echo "$json" | yq -e '.status' - >/dev/null 2>&1; then
@@ -137,7 +139,7 @@ extract() {
 # asserting nothing. So the set is pinned here as a literal rather than merely
 # warned about. Update it in the same commit that adds or removes such a
 # resource, which puts the change in front of a reviewer.
-EXPECT_NO_STATUS="dr-unreferenced lp-unattached tp-progressing"
+EXPECT_NO_STATUS="dr-unreferenced"
 SAW_NO_STATUS=""
 
 if [ "${SKIP_REFRESH:-0}" = "1" ]; then
@@ -152,15 +154,16 @@ extract "${DEMO_NS}"      backend/httpbin-static        Backend       healthy
 extract "${SCENARIOS_NS}" backend/backend-degraded      Backend       degraded
 extract "${DEMO_NS}"      trafficpolicy/add-demo-header TrafficPolicy healthy
 extract "${DEMO_NS}"      trafficpolicy/tp-degraded     TrafficPolicy degraded
-extract "${SCENARIOS_NS}" trafficpolicy/tp-progressing  TrafficPolicy progressing
+extract "${SCENARIOS_NS}" trafficpolicy/tp-target-missing TrafficPolicy target_missing
 
 # Kinds from the coverage probe (see COVERAGE.md). Each second fixture is named
 # after the state actually observed: no_status where the controller writes no
-# status at all, degraded where it is genuinely rejected. lp-degraded-ca is
+# status at all, degraded where it is genuinely rejected, target_missing where
+# the policy targets something that does not exist. lp-degraded-ca is
 # deliberately NOT captured: it is Accepted=True despite its dangling reference.
 extract "${DEMO_NS}" listenerpolicy/lp-healthy            ListenerPolicy      healthy
 extract "${DEMO_NS}" listenerpolicy/lp-degraded-accesslog ListenerPolicy      degraded
-extract "${DEMO_NS}" listenerpolicy/lp-unattached         ListenerPolicy      no_status
+extract "${DEMO_NS}" listenerpolicy/lp-target-missing     ListenerPolicy      target_missing
 extract "${DEMO_NS}" backendconfigpolicy/bcp-healthy      BackendConfigPolicy healthy
 extract "${DEMO_NS}" backendconfigpolicy/bcp-degraded     BackendConfigPolicy degraded
 extract "${DEMO_NS}" directresponse/dr-healthy            DirectResponse      healthy
@@ -178,7 +181,7 @@ extract "${DEMO_NS}" directresponse/dr-unreferenced       DirectResponse      no
     exit 1
   fi
   # Say so on success too: a silent assertion is indistinguishable from one
-  # that never ran. These three are expected, not a problem -- hence no
+  # that never ran. These are expected, not a problem -- hence no
   # "WARNING", which would cry wolf on every single run.
   #
   # stderr, not stdout: check-generated.sh runs this script with >/dev/null to
@@ -188,7 +191,7 @@ extract "${DEMO_NS}" directresponse/dr-unreferenced       DirectResponse      no
 fi
 
 echo
-echo "==> Assembling ${OUT} from ${SRC}/ (health.lua, health_test.yaml, testdata/ -- all 21 fixtures: the 12 just-refreshed captures + the 9 tracked fixtures untouched above)"
+echo "==> Assembling ${OUT} from ${SRC}/ (health.lua, health_test.yaml, testdata/ -- all 23 fixtures: the 12 just-refreshed captures + the 11 tracked fixtures untouched above)"
 rm -rf "$OUT"
 install_shape() {
   local shape="$1"; shift

@@ -2,7 +2,7 @@
 
 Teach ArgoCD to report the health of kgateway's `gateway.kgateway.dev` resources, by adding five entries to your `argocd-cm` ConfigMap. No ArgoCD upgrade, no plugin, no restart. Takes about ten minutes, most of it reading.
 
-Tracks [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871). Verified against kgateway v2.4.5 and ArgoCD chart 10.9.2 (see [`env.sh`](../env.sh) for the exact pins).
+Tracks [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871). Verified against kgateway v2.5.1 and v2.4.5, and ArgoCD chart 10.9.2 (see [`env.sh`](../env.sh) for the exact pins).
 
 ## The problem
 
@@ -16,10 +16,10 @@ Real output from the demo in this repo, same cluster, same resources, before and
                                            before        after
 Backend/backend-degraded                   (none)        Degraded
 TrafficPolicy/tp-degraded                  (none)        Degraded
-TrafficPolicy/tp-progressing               (none)        Progressing
+TrafficPolicy/tp-target-missing            (none)        Degraded
 BackendConfigPolicy/bcp-degraded           (none)        Degraded
 BackendConfigPolicy/bcp-healthy            (none)        Healthy
-ListenerPolicy/lp-unattached               (none)        Progressing
+DirectResponse/dr-unreferenced             (none)        Progressing
 DirectResponse/dr-healthy                  (none)        Healthy
 ```
 
@@ -27,7 +27,7 @@ DirectResponse/dr-healthy                  (none)        Healthy
 
 **Which route do you need?** If your `argocd-cm` is managed declaratively — the argo-helm chart, a GitOps repo, Kustomize — a `kubectl patch` is reverted the next time that source is applied. Use route B. If you are on a hosted or managed ArgoCD, see [route C](#route-c--hosted-and-managed-argocd).
 
-**What has been tested.** Install, removal, hard refresh and the resulting health, executed live against kgateway v2.4.5 on two different ArgoCD installations: argo-helm chart 10.9.2 (both routes; route B proven by stripping all five keys from `argocd-cm`, running a real `helm upgrade`, and confirming they came back with the Lua byte-identical to this repo's sources), and a stock `kubectl apply` install of ArgoCD v3.5.5 from the upstream manifest, with `controller.resource.health.persist` **unset** and TLS on — a configuration nobody here tuned. On that stock cluster the five keys merged into a non-empty `argocd-cm` without disturbing its nine existing keys, an Application over rejected resources flipped from `Healthy` to `Degraded`, per-resource badges rendered `Healthy`/`Degraded`/`Progressing` once persistence was enabled, and the removal procedure restored the ConfigMap to its exact original key set. Route A on that stock cluster was driven from the `curl` download of the v0.0.1 release asset, not a clone, and the Lua that landed in `argocd-cm` was byte-identical to `healthchecks/lua/<shape>/health.lua` for all five kinds. Not executed: ArgoCD 2.x, and route B's `curl` download.
+**What has been tested.** Install, removal, hard refresh and the resulting health, executed live against kgateway v2.4.5 on two different ArgoCD installations: argo-helm chart 10.9.2 (both routes; route B proven by stripping all five keys from `argocd-cm`, running a real `helm upgrade`, and confirming they came back with the Lua byte-identical to this repo's sources), and a stock `kubectl apply` install of ArgoCD v3.5.5 from the upstream manifest, with `controller.resource.health.persist` **unset** and TLS on — a configuration nobody here tuned. On that stock cluster the five keys merged into a non-empty `argocd-cm` without disturbing its nine existing keys, an Application over rejected resources flipped from `Healthy` to `Degraded`, per-resource badges rendered `Healthy`/`Degraded`/`Progressing` once persistence was enabled, and the removal procedure restored the ConfigMap to its exact original key set. Route A on that stock cluster was driven from the `curl` download of the v0.0.1 release asset, not a clone, and the Lua that landed in `argocd-cm` was byte-identical to `healthchecks/lua/<shape>/health.lua` for all five kinds. On kgateway v2.5.1, route A was re-run on argo-helm chart 10.9.2 and all 14 resources reached the expected health. Not executed: ArgoCD 2.x, route B's `curl` download, and route B and the stock install on v2.5.1.
 
 ### Route A — patch `argocd-cm` directly
 
@@ -103,7 +103,7 @@ Hosted control planes do not all give you `kubectl` access to the ArgoCD namespa
 - **Codefresh GitOps Runtime.** The runtime runs in your own cluster and embeds the standard argo-helm `argo-cd` chart as a subchart, so this is route B1 with one extra level of nesting: put the `configs.cm` block under an `argo-cd:` key in the runtime's values.
 - **EKS Capability for Argo CD.** You create an `argocd-cm` ConfigMap in the capability's namespace and AWS reads the supported settings from it. `resource.customizations.health.<group>_<kind>` is supported and documented as *overriding* the capability's built-in checks. Two differences from route A: the ConfigMap **must carry the label `app.kubernetes.io/part-of: argocd`**, and it may not exist yet — `kubectl patch` fails on an absent ConfigMap, so create it with `kubectl apply` on the first install.
 
-**On Lua portability.** ArgoCD gives a health script the full Lua standard library only when the script is bundled in an ArgoCD release; one delivered through `argocd-cm`, as these are, runs with `useOpenLibs` off unless you opt in per kind. The EKS capability forces it off regardless. These scripts need nothing beyond `ipairs` and string concatenation, which the sandbox always provides — verified by running all 21 fixtures through ArgoCD's own harness with the standard libraries disabled. So they run unchanged on every host above, with no extra keys.
+**On Lua portability.** ArgoCD gives a health script the full Lua standard library only when the script is bundled in an ArgoCD release; one delivered through `argocd-cm`, as these are, runs with `useOpenLibs` off unless you opt in per kind. The EKS capability forces it off regardless. These scripts need nothing beyond `ipairs` and string concatenation, which the sandbox always provides — verified by running all 23 fixtures through ArgoCD's own harness with the standard libraries disabled. So they run unchanged on every host above, with no extra keys.
 
 ## What is covered
 
@@ -122,8 +122,8 @@ Five kinds, all in the `gateway.kgateway.dev` group:
 These three have no check, each for a different reason. If one of them shows no badge after installing, that is expected.
 
 - **`GatewayParameters`** has no status. The CRD schema says so outright, so there is nothing for a health check to read.
-- **`HTTPListenerPolicy`** is deprecated as of kgateway 2.4.x in favour of `ListenerPolicy.spec.httpSettings`, and is already gone from kgateway `main`. A check would ship for a kind that disappears. Migrate to `ListenerPolicy`, which is covered.
-- **`GatewayExtension`** writes no status at all. This was verified on a live v2.4.5 cluster: a valid and an invalid instance both ended up with no `status` block while the controller logged successful reconciliation. Until kgateway populates it there is nothing to check; it is tracked in [kgateway#14792](https://github.com/kgateway-dev/kgateway/issues/14792).
+- **`HTTPListenerPolicy`** is deprecated in kgateway 2.4.x in favour of `ListenerPolicy.spec.httpSettings`, and removed in 2.5.x. A check would ship for a kind that no longer exists. Migrate to `ListenerPolicy`, which is covered.
+- **`GatewayExtension`** writes no status at all. This was verified on live v2.4.5 and v2.5.1 clusters: a valid and an invalid instance both ended up with no `status` block while the controller logged successful reconciliation. Until kgateway populates it there is nothing to check; it is tracked in [kgateway#14792](https://github.com/kgateway-dev/kgateway/issues/14792).
 
 ## What each health state means
 
@@ -138,7 +138,7 @@ The checks read only conditions written by the kgateway controller (`controllerN
 Two things worth knowing:
 
 - **A Degraded policy often takes its target down with it.** A broken `BackendConfigPolicy` also marks the `Backend` it targets `Accepted=False`; a broken `ListenerPolicy` does the same to its `Gateway`. You will see both go Degraded; the policy is the one to fix. The error is per target, so a healthy sibling policy stays Healthy.
-- **Not every dangling reference is caught by kgateway.** On v2.4.5, a missing Secret or Service is rejected, but a missing ConfigMap in `ListenerPolicy` `caCertificateRefs` is accepted, so that policy is Healthy. The health check reports what kgateway reports; it cannot see further than kgateway does. The demo's [`COVERAGE.md`](../COVERAGE.md) records the observed status of every case.
+- **Not every dangling reference is caught by kgateway.** On v2.4.5 and v2.5.1, a missing Secret or Service is rejected, but a missing ConfigMap in `ListenerPolicy` `caCertificateRefs` is accepted, so that policy is Healthy. The health check reports what kgateway reports; it cannot see further than kgateway does. The demo's [`COVERAGE.md`](../COVERAGE.md) records the observed status of every case.
 
 A stuck Progressing on a policy is the signal most worth investigating: "Waiting for ListenerPolicy status" means kgateway did not find anything to attach it to.
 

@@ -7,10 +7,16 @@ tests:
     status: Degraded
     message: 'extauth: httpbin/no-such-gateway-extension: gateway extension not found'
   inputPath: testdata/degraded.yaml
+# Target does not exist. v2.5.x reports it as Accepted=False/TargetNotFound on a
+# synthetic StatusSummary ancestor; v2.4.x writes no status at all.
+- healthStatus:
+    status: Degraded
+    message: "HTTPRoute scenarios/no-such-route not found"
+  inputPath: testdata/target_missing.yaml
 - healthStatus:
     status: Progressing
     message: "Waiting for TrafficPolicy status"
-  inputPath: testdata/progressing.yaml
+  inputPath: testdata/target_missing_v2_4.yaml
 # The foreign ancestor is Invalid but owned by another controller, so the
 # result must be identical to healthy.yaml.
 - healthStatus:

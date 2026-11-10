@@ -1,6 +1,6 @@
 -- Health check for gateway.kgateway.dev kinds with standard metav1.Condition
--- status: Backend. (GatewayExtension would belong here, but it writes no
--- status at all on v2.4.5 and is excluded -- see the design.)
+-- status: Backend. (GatewayExtension belongs here once kgateway writes its
+-- status; see kgateway#14792.)
 -- One byte-identical copy is installed per kind; messages read obj.kind.
 --
 -- Status shape: status.conditions[] (standard metav1.Condition list).
@@ -20,6 +20,8 @@ local hs = {}
 -- Messages read obj.kind so this one script serves every kind of this status
 -- shape byte-identically.
 
+-- The union of condition types across every kind this script serves. A kind
+-- whose types are missing here shows Progressing forever, with no error.
 local RECOGNISED = { Accepted = true, EndpointsDiscovered = true }
 
 -- Stale status describes the previous spec, so treat it as "not yet known"

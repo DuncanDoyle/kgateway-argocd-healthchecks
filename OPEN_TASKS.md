@@ -3,7 +3,7 @@
 Deferred work, in rough priority order. See [ROADMAP.md](ROADMAP.md) for the
 programme view and what each phase covers.
 
-**Last updated:** 2026-10-13
+**Last updated:** 2026-11-10
 
 ## Current approach: ConfigMap first, upstream later
 
@@ -121,7 +121,8 @@ and the sync step no longer assumes a logged-in `argocd` CLI.
       still the right answer if a SHA pin is ever reintroduced.)
 - [ ] `hack/install-to-argocd-clone.sh` tests `-d "$ARGOCD_DIR/.git"`, which rejects
       a git worktree or submodule checkout where `.git` is a file. Use `-e`.
-      Fails safe today.
+      Fails safe today. Hit during the v2.5.1 revalidation, which had to
+      `rsync` the tree into an argo-cd worktree by hand.
 - [ ] `hack/install-to-argocd-clone.sh`'s trailing `git status` can make the script
       exit non-zero after a successful sync, under `set -e`.
 - [ ] `hack/install-to-argocd-clone.sh`'s content guard requires only **one**
@@ -132,6 +133,11 @@ and the sync step no longer assumes a logged-in `argocd` CLI.
       `pipefail` — but it is the wrong signal.
 
 ## Fixtures and naming
+
+- [ ] Add a `Backend` fixture carrying a condition type kgateway does not own,
+      e.g. a third-party `False` condition. The `RECOGNISED` allowlist in
+      `conditions/health.lua` is what keeps it out of the verdict, and nothing
+      fails today if someone deletes it.
 
 - [ ] `manifests/coverage/listenerpolicy.yaml`'s `lp-degraded-ca` is named and
       commented as a degraded attempt but reports **Healthy**, because kgateway
@@ -152,4 +158,9 @@ and the sync step no longer assumes a logged-in `argocd` CLI.
       [#1](https://github.com/DuncanDoyle/kgateway-argocd-healthchecks/issues/1), which
       carries the done-when list; a contributor volunteered upstream on
       2026-10-13 proposing the `Backend` conditions pattern, which our existing
-      Lua would cover with no new script.
+      Lua would cover with no new script. That fix is
+      [kgateway#14815](https://github.com/kgateway-dev/kgateway/pull/14815),
+      waiting on a maintainer to approve its CI workflow runs. Re-checked on
+      v2.5.1 (2026-11-10): still no status written. When it lands, drop the
+      "writes no status" claim from `ROADMAP.md`, `docs/INSTALL.md`,
+      `COVERAGE.md` and the `conditions/health.lua` header in one edit.

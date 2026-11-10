@@ -1,8 +1,10 @@
+# Captured live on kgateway v2.4.5 (as tp-progressing), then renamed. Not refreshed:
+# v2.4.x writes no status for a policy whose target does not exist.
 apiVersion: gateway.kgateway.dev/v1alpha1
 kind: TrafficPolicy
 metadata:
   generation: 1
-  name: tp-progressing
+  name: tp-target-missing
   namespace: scenarios
 spec:
   headerModifiers:
