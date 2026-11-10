@@ -2,9 +2,9 @@
 # Apply with:
 #   kubectl -n argocd patch configmap argocd-cm --patch-file healthchecks/argocd-cm-patch.yaml
 #
-# NOTE: a kubectl patch is reverted the next time a declarative source for
-# argocd-cm is applied. If you run the argo-helm chart, use
-# argocd-helm-values.yaml instead.
+# NOTE: a kubectl patch isn't part of any declarative source for argocd-cm.
+# If you run the argo-helm chart, use argocd-helm-values.yaml instead, so the
+# keys live in your values.
 apiVersion: v1
 kind: ConfigMap
 metadata:

@@ -6,9 +6,9 @@
 #   healthchecks/argocd-helm-values.yaml   argo-helm values, under configs.cm
 #
 # Both carry the SAME five Lua scripts; only the wrapper differs. Which one a
-# user needs depends on how they manage argocd-cm: a kubectl patch is reverted
-# the next time a declarative source (argo-helm, Kustomize, a GitOps repo) is
-# applied, so anyone running the chart needs the values form instead.
+# user needs depends on how they manage argocd-cm: a kubectl patch isn't part
+# of a declarative source (argo-helm, Kustomize, a GitOps repo), so anyone
+# running the chart wants the values form, where the keys live in their values.
 #
 # argocd-cm entries OVERRIDE bundled checks (util/lua/lua.go GetHealthScript:
 # configmap exact -> configmap wildcard -> embedded exact -> embedded
@@ -42,9 +42,9 @@ emit_all() {
 # Apply with:
 #   kubectl -n argocd patch configmap argocd-cm --patch-file healthchecks/argocd-cm-patch.yaml
 #
-# NOTE: a kubectl patch is reverted the next time a declarative source for
-# argocd-cm is applied. If you run the argo-helm chart, use
-# argocd-helm-values.yaml instead.
+# NOTE: a kubectl patch isn't part of any declarative source for argocd-cm.
+# If you run the argo-helm chart, use argocd-helm-values.yaml instead, so the
+# keys live in your values.
 apiVersion: v1
 kind: ConfigMap
 metadata:
