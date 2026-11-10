@@ -74,7 +74,7 @@ cd <path-to-argo-cd-clone>
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'
 ```
 
-Verified against argo-cd `2f3711241` (the base of the upstream branch): 21 passing fixtures.
+Verified against argo-cd `2f3711241` (the base of the upstream branch): 23 passing fixtures.
 
 [hack/README.md](hack/README.md) explains what each script does, how the three verification layers differ, and which one will blank every badge in your UI for a minute.
 

@@ -147,10 +147,10 @@ kubectl -n argocd get application kgw-scenarios \
 ```
 Backend/backend-degraded  -> Degraded
 TrafficPolicy/tp-degraded -> Degraded
-TrafficPolicy/tp-progressing -> Progressing
+TrafficPolicy/tp-target-missing -> Degraded
 ```
 
-Hover the badge in the UI for the message: the Degraded ones carry kgateway's own rejection reason, and `Progressing` means the policy attached to nothing yet.
+Hover the badge in the UI for the message: each carries kgateway's own rejection reason. `tp-target-missing` targets an HTTPRoute that does not exist; on kgateway v2.4.x it shows `Progressing` instead, because that line writes no status for it.
 
 See [SCENARIOS.md](SCENARIOS.md) for what each resource is meant to show — and note that one of the three lives in the `httpbin` namespace rather than `scenarios`, for reasons that file explains.
 

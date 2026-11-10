@@ -4,7 +4,7 @@ TrafficPolicy/add-demo-header (httpbin) -> Healthy
 ### kgw-scenarios
 Backend/backend-degraded (scenarios) -> Degraded
 TrafficPolicy/tp-degraded (httpbin) -> Degraded
-TrafficPolicy/tp-progressing (scenarios) -> Progressing
+TrafficPolicy/tp-target-missing (scenarios) -> Degraded
 ### kgw-coverage
 Backend/coverage-backend (httpbin) -> Degraded
 BackendConfigPolicy/bcp-degraded (httpbin) -> Degraded
@@ -14,4 +14,4 @@ DirectResponse/dr-unreferenced (httpbin) -> Progressing
 ListenerPolicy/lp-degraded-accesslog (httpbin) -> Degraded
 ListenerPolicy/lp-degraded-ca (httpbin) -> Healthy
 ListenerPolicy/lp-healthy (httpbin) -> Healthy
-ListenerPolicy/lp-unattached (httpbin) -> Progressing
+ListenerPolicy/lp-target-missing (httpbin) -> Degraded

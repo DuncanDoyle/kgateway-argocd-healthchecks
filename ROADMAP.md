@@ -7,7 +7,7 @@ Each phase gets its own design spec and implementation plan under
 order, and why some kinds are excluded. Further phases may follow once these
 complete; they are not described here.
 
-**Last updated:** 2026-10-07
+**Last updated:** 2026-11-10
 
 ## The problem
 
@@ -42,10 +42,11 @@ different semantics. The docs must say when it is safe to remove.
 | Phase | Scope | State |
 |---|---|---|
 | 1 | `Backend`, `TrafficPolicy` | **Complete.** Cluster-captured fixtures, passing argo-cd's own harness, proven on a live cluster |
-| 2 | `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse` | **Implemented.** [Design](docs/superpowers/specs/2026-10-06-phase2-design.md), [plan](docs/superpowers/plans/2026-10-06-phase-a2.md); 21 fixtures across five kinds pass the upstream harness |
+| 2 | `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse` | **Implemented.** [Design](docs/superpowers/specs/2026-10-06-phase2-design.md), [plan](docs/superpowers/plans/2026-10-06-phase-a2.md); 23 fixtures across five kinds pass the upstream harness |
 
 Phase 2 completes coverage of every `gateway.kgateway.dev` kind that has a
-status to check — five of eight — and closes #13871 with three documented
+status to check — five of seven on kgateway v2.5.x (five of eight on v2.4.x,
+which still ships `HTTPListenerPolicy`) — and closes #13871 with documented
 exclusions. The checks then ship as a documented ConfigMap package, followed by
 the upstream argo-cd PR.
 
@@ -64,8 +65,8 @@ resource.customizations.health.gateway.kgateway.dev_DirectResponse
 | Kind | Why |
 |---|---|
 | `GatewayParameters` | No status implemented — the CRD schema says so outright. Any check would be a constant. Revisit if kgateway implements status. |
-| `HTTPListenerPolicy` | Deprecated in 2.4.x in favour of `ListenerPolicy.spec.httpSettings`, and already absent from `main`. A check would ship for a kind that disappears next minor. |
-| `GatewayExtension` | Writes no status at all — verified on a live v2.4.5 cluster, not inferred: a valid and an invalid instance both produced no `status` block while the controller logged successful reconciliation. The API declares the status type and the CRD carries `/status` RBAC, but nothing populates it. Filed as [kgateway#14792](https://github.com/kgateway-dev/kgateway/issues/14792); revisit once implemented. |
+| `HTTPListenerPolicy` | Deprecated in 2.4.x in favour of `ListenerPolicy.spec.httpSettings`, and removed in 2.5.x. |
+| `GatewayExtension` | Writes no status at all — verified on live v2.4.5 and v2.5.1 clusters, not inferred: a valid and an invalid instance both produced no `status` block while the controller logged successful reconciliation. The API declares the status type and the CRD carries `/status` RBAC, but nothing populates it. Filed as [kgateway#14792](https://github.com/kgateway-dev/kgateway/issues/14792); fix proposed in [kgateway#14815](https://github.com/kgateway-dev/kgateway/pull/14815). |
 
 ## Phase 2 design decisions
 
@@ -118,8 +119,8 @@ caused every significant defect found so far:
   cluster. Where a state cannot be produced, say so in the PR rather than
   fabricating it. Derived fixtures carry a header disclosing exactly what was
   substituted.
-- **Verify shipped CRDs, not Go types.** The two differ: kgateway v2.4.5 ships
-  8 CRDs where `main` ships 7.
+- **Verify shipped CRDs, not Go types.** The inventory moves between lines:
+  kgateway v2.4.5 ships 8 CRDs, v2.5.1 ships 7.
 
 ## Open decisions
 

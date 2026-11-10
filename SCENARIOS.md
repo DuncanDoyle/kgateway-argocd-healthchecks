@@ -13,12 +13,12 @@ before being committed — see below.
 
 | Resource | Namespace | Note |
 |---|---|---|
-| `TrafficPolicy/tp-progressing` | `scenarios` | as designed |
+| `TrafficPolicy/tp-target-missing` | `scenarios` | as designed |
 | `Backend/backend-degraded` | `scenarios` | as designed (field name fixed, see below) |
 | `TrafficPolicy/tp-degraded` | **`httpbin`** | moved — see "Cross-namespace targeting" below |
 
 `kubectl -n scenarios get trafficpolicy,backend` only ever shows two of the
-three tracked scenario resources (`tp-progressing`, `backend-degraded`).
+three tracked scenario resources (`tp-target-missing`, `backend-degraded`).
 `tp-degraded` must be looked up in `httpbin`. Anyone scripting a status
 check against "the scenarios namespace" needs to know this.
 
@@ -110,7 +110,7 @@ warns about. Fixed to `backendRefs`; the semantic intent (reference a
 
 | Resource | Mechanism | Predicted | Observed |
 |---|---|---|---|
-| `TrafficPolicy/tp-progressing` | targets a non-existent HTTPRoute | no ancestors → Progressing | **Confirmed.** `status` field is entirely absent from the object (`kubectl get ... -o jsonpath='{.status}'` returns empty) — not an empty `ancestors: []`, but no `status` key at all. A health check keying off "no ancestors" must treat a *missing* `status` the same as an empty `ancestors` list. |
+| `TrafficPolicy/tp-target-missing` | targets a non-existent HTTPRoute | no ancestors → Progressing | **Confirmed on v2.4.5.** On v2.5.1 it is `Accepted=False/TargetNotFound` → Degraded instead; see [COVERAGE.md](COVERAGE.md#what-changed-on-v251). `status` field is entirely absent from the object (`kubectl get ... -o jsonpath='{.status}'` returns empty) — not an empty `ancestors: []`, but no `status` key at all. A health check keying off "no ancestors" must treat a *missing* `status` the same as an empty `ancestors` list. |
 | `TrafficPolicy/tp-degraded` | `extAuth.extensionRef` → non-existent GatewayExtension | `Accepted=False/Invalid` → Degraded | **Confirmed, plus an extra condition.** `status.ancestors[0].conditions`: `Accepted=False/reason=Invalid`, message `'extauth: httpbin/no-such-gateway-extension: gateway extension not found'`. There is also a second condition, `Attached=False/reason=Pending`, message `""`. The brief only predicted the Accepted condition; Attached staying `Pending` (never evaluated) because Accepted never becomes true is a real, additional observation — see the Pending probe below. |
 | `Backend/backend-degraded` | priority group → non-existent Backend | `Accepted=False/Invalid` → Degraded | **Confirmed.** `status.conditions[0]`: `Accepted=False/reason=Invalid`, message `'Backend error: "priority group 0: backend "no-such-backend" not found in namespace "scenarios""'`. |
 
@@ -160,11 +160,11 @@ status:
     type: Accepted
 ```
 
-### `TrafficPolicy/tp-progressing` full status
+### `TrafficPolicy/tp-target-missing` full status
 
-Empty — the object has no `status` field at all after creation and after
-the watch window. `kubectl -n scenarios get trafficpolicy tp-progressing -o
-jsonpath='{.status}'` returns nothing.
+On v2.4.5: empty — the object has no `status` field at all after creation
+and after the watch window. On v2.5.1: see
+`healthchecks/lua/TrafficPolicy/testdata/target_missing.yaml`.
 
 ## `Accepted=False/Reason=Pending` probe
 
