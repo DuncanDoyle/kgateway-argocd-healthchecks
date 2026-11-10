@@ -21,8 +21,11 @@
 --     an unfiltered check would report another controller's verdict as ours.
 --
 -- Reasons observed on real clusters (see the TrafficPolicy fixtures):
---   Accepted: Valid | PartiallyValid | Invalid | Pending
---   Attached: Attached | Merged | Overridden | Invalid | Pending
+--   Accepted: Valid | PartiallyValid | Invalid | Pending | TargetNotFound
+--   Attached: Attached | Merged | Overridden | Invalid | Pending | TargetNotFound
+--
+-- TargetNotFound (v2.5.x) arrives on a synthetic StatusSummary ancestor when
+-- a policy's target does not exist. It is Degraded: the targetRef is wrong.
 --
 -- Attached=False/Pending is deliberately Progressing, not Degraded: it is
 -- the steady companion of Accepted=False/Invalid (see the TrafficPolicy degraded fixture),
@@ -42,6 +45,7 @@ local DEGRADED_REASON = {
   Invalid = true,          -- rejected outright
   PartiallyValid = true,   -- part of the policy was rejected
   Overridden = true,       -- exists but is not in effect (Attached only)
+  TargetNotFound = true,   -- targetRef names something that does not exist
 }
 
 -- Stale status describes the previous spec, so treat it as "not yet known"
@@ -126,8 +130,8 @@ if obj.status ~= nil and obj.status.ancestors ~= nil then
 end
 
 -- No ancestors we own means the policy has not attached to anything yet
--- (or status is entirely absent). That is not healthy — it must not fall
--- through to Healthy.
+-- (or status is entirely absent, as on v2.4.x for a missing target). That is
+-- not healthy — it must not fall through to Healthy.
 hs.status = "Progressing"
 hs.message = "Waiting for " .. obj.kind .. " status"
 return hs

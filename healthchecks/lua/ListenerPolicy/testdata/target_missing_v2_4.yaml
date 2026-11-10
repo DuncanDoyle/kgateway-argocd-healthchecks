@@ -1,8 +1,10 @@
+# Captured live on kgateway v2.4.5 (as lp-unattached), then renamed. Not refreshed:
+# v2.4.x writes no status for a policy whose target does not exist.
 apiVersion: gateway.kgateway.dev/v1alpha1
 kind: ListenerPolicy
 metadata:
   generation: 1
-  name: lp-unattached
+  name: lp-target-missing
   namespace: httpbin
 spec:
   targetRefs:

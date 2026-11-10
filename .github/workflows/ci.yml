@@ -99,10 +99,10 @@ jobs:
       #
       # Note the leading whitespace in the pattern: Go indents subtest result
       # lines, so an anchored '^--- PASS' matches NOTHING here and would itself
-      # be a vacuous assertion (verified: it returns 0, not 21).
+      # be a vacuous assertion (verified: it returns 0, not the expected count).
       - name: Assert every fixture ran, on both delivery paths
         run: |
-          EXPECTED=21
+          EXPECTED=23
           rc=0
           for f in /tmp/harness.out /tmp/harness-restricted.out; do
             n=$(grep -cE '^[[:space:]]+--- PASS: TestLuaHealthScript/gateway\.kgateway\.dev/' "$f" || true)

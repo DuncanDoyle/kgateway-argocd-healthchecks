@@ -16,7 +16,7 @@ spec:
 apiVersion: gateway.kgateway.dev/v1alpha1
 kind: ListenerPolicy
 metadata:
-  name: lp-unattached
+  name: lp-target-missing
   namespace: httpbin
 spec:
   targetRefs:

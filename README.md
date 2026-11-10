@@ -65,7 +65,7 @@ Teardown is `./teardown.sh`, which removes everything `setup.sh` installed but l
 
 The real gate is argo-cd's own test harness, not the badges in the UI.
 
-21 fixtures are tracked under `healthchecks/lua/<Kind>/testdata/`, across five kinds: `Backend`, `TrafficPolicy`, `ListenerPolicy`, `BackendConfigPolicy` and `DirectResponse`. 13 are captured live, 7 are derived from a capture, and 1 is synthetic — each file's header comment says which, as does the header of `hack/extract-testdata.sh`.
+23 fixtures are tracked under `healthchecks/lua/<Kind>/testdata/`, across five kinds: `Backend`, `TrafficPolicy`, `ListenerPolicy`, `BackendConfigPolicy` and `DirectResponse`. 15 are captured live (2 of them on kgateway v2.4.5), 7 are derived from a capture, and 1 is synthetic — each file's header comment says which, as does the header of `hack/extract-testdata.sh`.
 
 ```bash
 ./hack/extract-testdata.sh      # refresh fixtures from the cluster, assemble out/

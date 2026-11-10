@@ -1,11 +1,10 @@
-# Targets an HTTPRoute that does not exist. Translation never encounters the
-# ancestor, so no ancestor entry is written and status.ancestors stays empty.
-# Expected: Progressing (a health check must not read "no ancestors" as
-# healthy).
+# Targets an HTTPRoute that does not exist. v2.5.x writes Accepted=False/
+# TargetNotFound on a synthetic StatusSummary ancestor -> Degraded. v2.4.x
+# writes no status at all -> Progressing.
 apiVersion: gateway.kgateway.dev/v1alpha1
 kind: TrafficPolicy
 metadata:
-  name: tp-progressing
+  name: tp-target-missing
   namespace: scenarios
 spec:
   targetRefs:
