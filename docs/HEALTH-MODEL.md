@@ -65,8 +65,8 @@ Then the results combine: any `Degraded` wins, then any `Progressing`, then any 
 | Situation | v2.4.x | v2.5.x |
 |---|---|---|
 | Policy whose target doesn't exist | no status → `Progressing` | `TargetNotFound` → `Degraded` |
-| Policy whose target exists but isn't attached | no status → `Progressing` | same |
-| `DirectResponse` used by nothing | no status → `Healthy` | same |
+| Policy whose target exists but isn't attached | no status → `Progressing` | no status → `Progressing` |
+| `DirectResponse` used by nothing | no status → `Healthy` | no status → `Healthy` |
 
 Before v2.3.0 kgateway wrote no `DirectResponse` status at all ([kgateway#13647](https://github.com/kgateway-dev/kgateway/pull/13647)), so every `DirectResponse` reads `Healthy` there. The fixtures cover v2.4.5 and v2.5.1.
 

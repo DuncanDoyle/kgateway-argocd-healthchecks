@@ -119,9 +119,9 @@ Five kinds, all in the `gateway.kgateway.dev` group:
 |---|---|
 | `Backend` | `status.conditions[]` (`Accepted`, `EndpointsDiscovered`) |
 | `TrafficPolicy` | `status.ancestors[].conditions[]` (`Accepted`, `Attached`) |
-| `ListenerPolicy` | same |
-| `BackendConfigPolicy` | same |
-| `DirectResponse` | same |
+| `ListenerPolicy` | `status.ancestors[].conditions[]` (`Accepted`, `Attached`) |
+| `BackendConfigPolicy` | `status.ancestors[].conditions[]` (`Accepted`, `Attached`) |
+| `DirectResponse` | `status.ancestors[].conditions[]` (`Accepted`, `Attached`) |
 
 ### Not covered, and why
 
