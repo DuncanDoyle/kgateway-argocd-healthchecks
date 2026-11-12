@@ -54,7 +54,7 @@ Only relevant once the ConfigMap package has been validated in real use.
       did not build.**~~ Done 2026-10-12 on minikube profile `kgw-stock`, with
       ArgoCD v3.5.5 installed from the **upstream manifest** rather than the
       chart — no `setup.sh` values, `controller.resource.health.persist` unset,
-      TLS on, and nine pre-existing `argocd-cm` keys. Route A applied from the
+      TLS on, and nine pre-existing `argocd-cm` keys. Method A applied from the
       v0.0.1 release asset via `curl`. Result: the five keys merged without
       disturbing the nine; `kgw-scenarios` flipped `Healthy` -> `Degraded` over
       rejected resources *without* enabling persistence; per-resource badges
@@ -77,7 +77,7 @@ Only relevant once the ConfigMap package has been validated in real use.
 - [x] ~~Note the untested paths that document already declares.~~ Resolved
       2026-10-12: both were executed on `kgw-stock`. `persist` unset is the
       stock default and is now the primary tested path; the `curl` download of
-      the release asset drove Route A there. Route B's `curl` download and
+      the release asset drove method A there. Method B's `curl` download and
       ArgoCD 2.x remain the only untested paths, and "What has been tested" now
       says exactly that.
 
