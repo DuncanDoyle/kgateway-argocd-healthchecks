@@ -65,7 +65,7 @@ Teardown is `./teardown.sh`, which removes everything `setup.sh` installed but l
 
 The real gate is argo-cd's own test harness, not the badges in the UI.
 
-23 fixtures are tracked under `healthchecks/lua/<Kind>/testdata/`, across five kinds: `Backend`, `TrafficPolicy`, `ListenerPolicy`, `BackendConfigPolicy` and `DirectResponse`. 15 are captured live (2 of them on kgateway v2.4.5), 7 are derived from a capture, and 1 is synthetic — each file's header comment says which, as does the header of `hack/extract-testdata.sh`.
+29 fixtures are tracked under `healthchecks/lua/<Kind>/testdata/`, across five kinds: `Backend`, `TrafficPolicy`, `ListenerPolicy`, `BackendConfigPolicy` and `DirectResponse`. 15 are captured live (2 of them on kgateway v2.4.5), 13 are derived from a capture, and 1 is synthetic — each file's header comment says which, as does the header of `hack/extract-testdata.sh`.
 
 ```bash
 ./hack/extract-testdata.sh      # refresh fixtures from the cluster, assemble out/
@@ -74,7 +74,7 @@ cd <path-to-argo-cd-clone>
 go test -v ./util/lua/ -run 'TestLuaHealthScript/gateway.kgateway.dev'
 ```
 
-Verified against argo-cd `2f3711241` (the base of the upstream branch): 23 passing fixtures.
+Verified against argo-cd `2f3711241` (the base of the upstream branch): 29 passing fixtures.
 
 [hack/README.md](hack/README.md) explains what each script does, how the three verification layers differ, and which one will blank every badge in your UI for a minute.
 

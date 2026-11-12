@@ -10,7 +10,7 @@ Backend/coverage-backend (httpbin) -> Degraded
 BackendConfigPolicy/bcp-degraded (httpbin) -> Degraded
 BackendConfigPolicy/bcp-healthy (httpbin) -> Healthy
 DirectResponse/dr-healthy (httpbin) -> Healthy
-DirectResponse/dr-unreferenced (httpbin) -> Progressing
+DirectResponse/dr-unreferenced (httpbin) -> Healthy
 ListenerPolicy/lp-degraded-accesslog (httpbin) -> Degraded
 ListenerPolicy/lp-degraded-ca (httpbin) -> Healthy
 ListenerPolicy/lp-healthy (httpbin) -> Healthy

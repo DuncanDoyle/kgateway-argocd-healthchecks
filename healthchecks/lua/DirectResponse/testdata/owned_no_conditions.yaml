@@ -1,0 +1,18 @@
+# Derived from healthy.yaml: our ancestor kept, its conditions removed, as
+# mid-reconcile. An owned ancestor must not take the unused fallback.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: DirectResponse
+metadata:
+  generation: 1
+  name: dr-healthy
+  namespace: httpbin
+spec:
+  status: 418
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      controllerName: kgateway.dev/kgateway

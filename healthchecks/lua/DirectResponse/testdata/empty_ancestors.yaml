@@ -1,0 +1,12 @@
+# Derived from healthy.yaml: ancestors emptied, as after the last route
+# detaches. No ancestors of ours, so the DirectResponse fallback applies.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: DirectResponse
+metadata:
+  generation: 1
+  name: dr-healthy
+  namespace: httpbin
+spec:
+  status: 418
+status:
+  ancestors: []

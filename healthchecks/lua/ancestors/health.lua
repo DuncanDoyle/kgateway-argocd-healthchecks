@@ -77,12 +77,17 @@ local function messageOrFallback(condition, fallback)
   return fallback
 end
 
+local owned = 0
+
 if obj.status ~= nil and obj.status.ancestors ~= nil then
   local degradedMsg = nil
   local progressing = false
   local healthyMsg = nil
 
   for _, ancestor in ipairs(obj.status.ancestors) do
+    if ancestor.controllerName == CONTROLLER then
+      owned = owned + 1
+    end
     -- Ignore ancestors we do not own.
     if ancestor.controllerName == CONTROLLER and ancestor.conditions ~= nil then
       for _, condition in ipairs(ancestor.conditions) do
@@ -127,6 +132,17 @@ if obj.status ~= nil and obj.status.ancestors ~= nil then
     hs.message = healthyMsg
     return hs
   end
+end
+
+-- A DirectResponse has no targetRefs; routes reference it, and only a route
+-- attached to our Gateway gets it ancestors. With none of ours it is unused
+-- config, not pending work: Progressing would stall any sync wave placed
+-- before its route. This says nothing was reported, not that it works
+-- (kgateway before v2.3 never reports DirectResponse status).
+if owned == 0 and obj.kind == "DirectResponse" then
+  hs.status = "Healthy"
+  hs.message = "No attachment status reported by " .. CONTROLLER
+  return hs
 end
 
 -- No ancestors we own means the policy has not attached to anything yet

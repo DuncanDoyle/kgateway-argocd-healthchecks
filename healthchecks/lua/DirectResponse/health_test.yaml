@@ -3,8 +3,34 @@ tests:
     status: Healthy
     message: Policy accepted
   inputPath: testdata/healthy.yaml
-# An unreferenced DirectResponse gets no status at all.
+# No ancestors of ours: unused config, not pending work. Healthy, so a sync
+# wave placed before the route that uses it does not stall.
+- healthStatus:
+    status: Healthy
+    message: "No attachment status reported by kgateway.dev/kgateway"
+  inputPath: testdata/no_status.yaml
+- healthStatus:
+    status: Healthy
+    message: "No attachment status reported by kgateway.dev/kgateway"
+  inputPath: testdata/empty_ancestors.yaml
+- healthStatus:
+    status: Healthy
+    message: "No attachment status reported by kgateway.dev/kgateway"
+  inputPath: testdata/foreign_only.yaml
+# An ancestor of ours keeps the normal verdicts.
 - healthStatus:
     status: Progressing
     message: "Waiting for DirectResponse status"
-  inputPath: testdata/no_status.yaml
+  inputPath: testdata/owned_no_conditions.yaml
+- healthStatus:
+    status: Progressing
+    message: "Waiting for DirectResponse status"
+  inputPath: testdata/stale.yaml
+- healthStatus:
+    status: Progressing
+    message: "Waiting for DirectResponse status"
+  inputPath: testdata/pending.yaml
+- healthStatus:
+    status: Degraded
+    message: invalid direct response
+  inputPath: testdata/invalid.yaml

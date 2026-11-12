@@ -1,0 +1,31 @@
+# Derived from healthy.yaml: the only ancestor belongs to another controller
+# and is Invalid. Foreign verdicts are ignored, so the DirectResponse fallback applies.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: DirectResponse
+metadata:
+  generation: 1
+  name: dr-healthy
+  namespace: httpbin
+spec:
+  status: 418
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-10-07T08:17:06Z"
+          message: rejected by another controller
+          observedGeneration: 1
+          reason: Invalid
+          status: "False"
+          type: Accepted
+        - lastTransitionTime: "2026-10-07T08:17:06Z"
+          message: Attached to all targets
+          observedGeneration: 1
+          reason: Attached
+          status: "True"
+          type: Attached
+      controllerName: example.com/some-other-controller

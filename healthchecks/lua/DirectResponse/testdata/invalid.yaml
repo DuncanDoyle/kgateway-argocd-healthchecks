@@ -1,0 +1,31 @@
+# Derived from healthy.yaml: Accepted=False/Invalid on our ancestor. A route-level
+# rejection must still read Degraded.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: DirectResponse
+metadata:
+  generation: 1
+  name: dr-healthy
+  namespace: httpbin
+spec:
+  status: 418
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-10-07T08:17:06Z"
+          message: invalid direct response
+          observedGeneration: 1
+          reason: Invalid
+          status: "False"
+          type: Accepted
+        - lastTransitionTime: "2026-10-07T08:17:06Z"
+          message: Attached to all targets
+          observedGeneration: 1
+          reason: Attached
+          status: "True"
+          type: Attached
+      controllerName: kgateway.dev/kgateway
