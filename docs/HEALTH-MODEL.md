@@ -11,7 +11,7 @@ This is the technical appendix to [`INSTALL.md`](INSTALL.md). It explains how Ar
 | `Degraded` | Failed | The sync fails |
 | none | No health check for the kind | Never waits |
 
-An Application shows its worst resource health, ignoring hooks. A sync is multi-step when it has more than one wave or phase (PreSync, PostSync), or an actual `PruneLast` prune. The last step does not wait for the health of its plain resources, but hooks are always waited on. "Sync waves" in `INSTALL.md` covers ordering.
+An Application shows its worst resource health, ignoring hooks and resources annotated `argocd.argoproj.io/ignore-healthcheck: "true"`. A sync is multi-step when it has more than one wave or phase (PreSync, PostSync), or an actual `PruneLast` prune. The last step does not wait for the health of its plain resources, but hooks are always waited on. "Sync waves" in `INSTALL.md` covers ordering.
 
 ## Which check covers which kind
 
@@ -25,12 +25,14 @@ An Application shows its worst resource health, ignoring hooks. A sync is multi-
 
 ## Gateway API kinds (ArgoCD's bundled checks)
 
-| Kind | `Degraded` | `Progressing` | `Healthy` |
-|---|---|---|---|
-| `Gateway` | `Accepted=False` or `ResolvedRefs=False`, on the Gateway or a listener | `Programmed` not `True`, on the Gateway or a listener; no status | otherwise |
-| `HTTPRoute`, `GRPCRoute` | `Accepted=False` or `ResolvedRefs=False` on a current parent | a parent with `Programmed` not `True`; no current parent; no status | at least one current parent |
+These checks return at the first match, so order matters more than precedence. Each step checks `ResolvedRefs=False` → `Degraded`, then `Accepted=False` → `Degraded`, then a present `Programmed` that isn't `True` → `Progressing`.
 
-These checks don't filter parents by controller. The `Gateway` check ignores generations. kgateway writes `kgateway.dev/Programmed` on routes, not `Programmed`, so the route checks never see it.
+| Kind | Steps, in order | Otherwise |
+|---|---|---|
+| `Gateway` | top-level conditions, then each listener | `Healthy` if it has conditions or listeners; `Progressing` if `status` is empty |
+| `HTTPRoute`, `GRPCRoute` | each parent whose conditions match the current generation; stale parents are skipped | `Healthy` if a current parent has conditions; else `Progressing` |
+
+A missing `Programmed` never causes `Progressing`. These checks don't filter parents by controller, and the `Gateway` check ignores generations. kgateway writes `kgateway.dev/Programmed` on routes, not `Programmed`, so the route checks never see it.
 
 ## The `ancestors` script
 
@@ -40,7 +42,7 @@ Each `Accepted` or `Attached` condition on them is classified in this order:
 
 | # | Condition | Counts as |
 |---|---|---|
-| 1 | stale (`observedGeneration` ≠ `metadata.generation`) | `Progressing`, whatever its status |
+| 1 | stale (`observedGeneration` ≠ `metadata.generation`; never stale when either is absent) | `Progressing`, whatever its status |
 | 2 | reason `Pending` (kgateway's default before it decides) | `Progressing` |
 | 3 | reason `Invalid`, `PartiallyValid`, `Overridden` or `TargetNotFound` | `Degraded` |
 | 4 | `status: True` | `Healthy` |
@@ -72,5 +74,5 @@ Before v2.3.0 kgateway wrote no `DirectResponse` status at all ([kgateway#13647]
 
 - **What kgateway doesn't report.** A `ListenerPolicy` whose `caCertificateRefs` names a missing ConfigMap is `Accepted=True`, so it reads `Healthy`.
 - **Other controllers.** Ancestors from other controllers are ignored, including their failures. A kgateway build with another controller name needs `CONTROLLER` changed in `healthchecks/lua/ancestors/health.lua`. The `conditions` script doesn't filter by controller.
-- **Time.** A script sees one object and keeps no memory between evaluations. `os.time()` exists, but without the `string` library a script on the `argocd-cm` path can't parse a timestamp. So a stuck controller looks the same as one that hasn't reconciled yet.
+- **Time.** A script sees one object and keeps no memory between evaluations. ArgoCD offers `os.time()`, but these scripts deliberately don't judge elapsed time: a verdict that flips with the clock alone would be hard to reason about. So a stuck controller looks the same as one that hasn't reconciled yet.
 - **Traffic.** `Healthy` means the status the check reads meets the rules above. It doesn't prove attachment, and it doesn't prove requests succeed.
