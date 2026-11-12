@@ -119,3 +119,7 @@ A predicate quantified over an empty set is vacuously true, so "all statuses are
 ## Versions
 
 All pins live in [`env.sh`](env.sh), which is the authoritative list.
+
+## License
+
+Apache License 2.0. See [`LICENSE`](LICENSE).
