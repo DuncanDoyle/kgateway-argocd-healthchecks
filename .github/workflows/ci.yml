@@ -102,7 +102,7 @@ jobs:
       # be a vacuous assertion (verified: it returns 0, not the expected count).
       - name: Assert every fixture ran, on both delivery paths
         run: |
-          EXPECTED=23
+          EXPECTED=29
           rc=0
           for f in /tmp/harness.out /tmp/harness-restricted.out; do
             n=$(grep -cE '^[[:space:]]+--- PASS: TestLuaHealthScript/gateway\.kgateway\.dev/' "$f" || true)

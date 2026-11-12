@@ -1,0 +1,31 @@
+# Derived from healthy.yaml: both conditions set to False/Pending, the default
+# kgateway writes before translation decides.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: DirectResponse
+metadata:
+  generation: 1
+  name: dr-healthy
+  namespace: httpbin
+spec:
+  status: 418
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-10-07T08:17:06Z"
+          message: ""
+          observedGeneration: 1
+          reason: Pending
+          status: "False"
+          type: Accepted
+        - lastTransitionTime: "2026-10-07T08:17:06Z"
+          message: ""
+          observedGeneration: 1
+          reason: Pending
+          status: "False"
+          type: Attached
+      controllerName: kgateway.dev/kgateway

@@ -12,10 +12,12 @@
 #     since out/ is gitignored and regenerated. Re-run this script any time the
 #     live cluster's status for these resources changes and you want the
 #     tracked fixtures to reflect it.
-#   - The other 11 of the 23 fixtures are never written by this script:
-#       * 7 DERIVED/asserted: Backend/no_status, ListenerPolicy/
+#   - The other 17 of the 29 fixtures are never written by this script:
+#       * 13 DERIVED/asserted: Backend/no_status, ListenerPolicy/
 #         foreign_controller, TrafficPolicy/{stale,foreign_controller,
-#         overridden,overridden_empty_message,partially_valid}.
+#         overridden,overridden_empty_message,partially_valid},
+#         DirectResponse/{empty_ancestors,foreign_only,owned_no_conditions,
+#         stale,pending,invalid}.
 #       * 1 hand-captured: Backend/stale, a real capture taken mid-probe that
 #         cannot be reproduced on demand.
 #       * 2 captured on kgateway v2.4.5: {TrafficPolicy,ListenerPolicy}/
@@ -191,7 +193,7 @@ extract "${DEMO_NS}" directresponse/dr-unreferenced       DirectResponse      no
 fi
 
 echo
-echo "==> Assembling ${OUT} from ${SRC}/ (health.lua, health_test.yaml, testdata/ -- all 23 fixtures: the 12 just-refreshed captures + the 11 tracked fixtures untouched above)"
+echo "==> Assembling ${OUT} from ${SRC}/ (health.lua, health_test.yaml, testdata/ -- all 29 fixtures: the 12 just-refreshed captures + the 17 tracked fixtures untouched above)"
 rm -rf "$OUT"
 install_shape() {
   local shape="$1"; shift

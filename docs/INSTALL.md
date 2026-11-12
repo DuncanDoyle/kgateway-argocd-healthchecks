@@ -19,7 +19,7 @@ TrafficPolicy/tp-degraded                  (none)        Degraded
 TrafficPolicy/tp-target-missing            (none)        Degraded
 BackendConfigPolicy/bcp-degraded           (none)        Degraded
 BackendConfigPolicy/bcp-healthy            (none)        Healthy
-DirectResponse/dr-unreferenced             (none)        Progressing
+DirectResponse/dr-unreferenced             (none)        Healthy
 DirectResponse/dr-healthy                  (none)        Healthy
 ```
 
@@ -133,16 +133,33 @@ A distribution built on kgateway may register a different controller name. There
 
 | State | Meaning | Typical causes |
 |---|---|---|
-| **Healthy** | kgateway accepted the resource (`Accepted=True`) and, for policies, attached it (`Attached=True`). | Normal operation. |
+| **Healthy** | kgateway accepted the resource (`Accepted=True`) and, for policies, attached it (`Attached=True`). Also a `DirectResponse` with no status from kgateway (see below). | Normal operation. |
 | **Degraded** | kgateway rejected the resource, or part of it: a condition with reason `Invalid`, `PartiallyValid` or `Overridden`, or any other `False` condition except `Pending`. For `Backend`, any failing `Accepted` or `EndpointsDiscovered` condition. | A reference to a Secret or Service that does not exist (for example `BackendConfigPolicy.spec.tls.secretRef`, or a `ListenerPolicy` access log backend); an invalid spec; a policy overridden by another. |
-| **Progressing** | kgateway has not reached a verdict yet. Reason `Pending`; status that describes an older `metadata.generation` than the current spec; or no status at all. | Just applied, or just edited. Also **a policy that attaches to nothing**: a `ListenerPolicy` targeting a Gateway that does not exist, or a `DirectResponse` no route references, gets no `status` from kgateway and so stays Progressing indefinitely. |
+| **Progressing** | kgateway has not reached a verdict yet. Reason `Pending`; status that describes an older `metadata.generation` than the current spec; or no status at all. | Just applied, or just edited. Also **a policy that attaches to nothing**: one whose target exists but isn't attached to a kgateway Gateway, or on v2.4.x one whose target does not exist, gets no `status` from kgateway and so stays Progressing indefinitely. (On v2.5.x a missing target is Degraded, `TargetNotFound`.) |
 
-Two things worth knowing:
+Worth knowing:
 
 - **A Degraded policy often takes its target down with it.** A broken `BackendConfigPolicy` also marks the `Backend` it targets `Accepted=False`; a broken `ListenerPolicy` does the same to its `Gateway`. You will see both go Degraded; the policy is the one to fix. The error is per target, so a healthy sibling policy stays Healthy.
+- **A `DirectResponse` with no status is Healthy, not Progressing.** Routes reference it, and kgateway reports on it only once such a route is attached. Unused, it is config rather than pending work, and Progressing would stall a sync wave placed before its route. The badge says "No attachment status reported by kgateway.dev/kgateway": it only means kgateway reported nothing. A referenced `DirectResponse` still waiting for reconciliation, or a controller that fails to write status, reads the same, and it proves nothing about traffic. On kgateway before v2.3, which never reports `DirectResponse` status, every one reads this way. Details in [`COVERAGE.md`](../COVERAGE.md#a-directresponse-with-no-status).
 - **Not every dangling reference is caught by kgateway.** On v2.4.5 and v2.5.1, a missing Secret or Service is rejected, but a missing ConfigMap in `ListenerPolicy` `caCertificateRefs` is accepted, so that policy is Healthy. The health check reports what kgateway reports; it cannot see further than kgateway does. The demo's [`COVERAGE.md`](../COVERAGE.md) records the observed status of every case.
 
 A stuck Progressing on a policy is the signal most worth investigating: "Waiting for ListenerPolicy status" means kgateway did not find anything to attach it to.
+
+### Sync waves
+
+ArgoCD gates on health only in a sync with more than one step: several waves, a PostSync hook, or an actual `PruneLast` prune. Within such a sync:
+
+- A Progressing resource holds up the next step, and a Degraded one fails the sync.
+- A resource with no health check never holds anything up.
+- Running hooks are always waited on.
+- The last step can finish right after it is applied, without waiting for health. A successful sync doesn't prove the last wave is healthy; watch the Application's health for that.
+
+So order your waves by what each resource needs to exist first:
+
+1. **GatewayClass, the Gateway, and its listener certificates.**
+2. **Config that routes reference.** A `DirectResponse` gets a verdict with nothing referencing it. A `Backend` needs any `Backend` it lists in `priorityGroups` to exist first.
+3. **Routes, after the Gateway they attach to.** A route whose Gateway doesn't exist never gets a status and stays Progressing. Put a delegating parent route and its child routes in the same wave: the parent reads Degraded while a child is missing, and a child with no reachable parent stays Progressing.
+4. **Policies, after their targets.** A policy whose target doesn't exist reads Degraded on v2.5.x (`TargetNotFound`), which fails the sync; on v2.4.x it gets no status and stays Progressing. One whose target exists but isn't attached to a Gateway stays Progressing on both.
 
 ## Verifying it
 

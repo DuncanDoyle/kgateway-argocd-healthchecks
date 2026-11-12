@@ -45,7 +45,7 @@ The one task that genuinely needs a cluster. A new kgateway release can change t
 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs on every push and pull request, **with no cluster**:
 
 - `SKIP_REFRESH=1 ./hack/check-generated.sh` — does `argocd-cm-patch.yaml` still match the Lua it was rendered from? This is the phase-1 failure, caught automatically now.
-- The argo-cd Lua harness against the 23 committed fixtures, with an assertion that all 23 subtests actually passed — run **twice**, once with Lua's standard libraries enabled (the bundled delivery path) and once with them disabled (the `argocd-cm` path we actually ship). See the sandbox note under [Design decisions](#design-decisions-worth-knowing-before-editing) for why the two differ.
+- The argo-cd Lua harness against the 29 committed fixtures, with an assertion that all 29 subtests actually passed — run **twice**, once with Lua's standard libraries enabled (the bundled delivery path) and once with them disabled (the `argocd-cm` path we actually ship). See the sandbox note under [Design decisions](#design-decisions-worth-knowing-before-editing) for why the two differ.
 
 `SKIP_REFRESH=1` is what makes this possible: the cluster dependency in `extract-testdata.sh` is confined to the `extract()` function, so skipping the 12 captures leaves pure file assembly. Nothing else in the repo calls `kubectl`.
 
@@ -129,7 +129,7 @@ So `string.*` and `math.*` are **absent** for the way we ship. Both scripts stay
 Note the asymmetry if these ever go upstream: a merged script *gains* the standard library, so upstream review would not flag a `string.*` call that breaks our ConfigMap package.
 
 
-**`extract-testdata.sh` enumerates what it may overwrite.** Twelve of the 23 fixtures are refreshable from a live cluster; the other eleven are derived, hand-captured, synthetic, or captured on an older kgateway line — states the cluster cannot be made to produce on demand. The script lists those twelve explicitly rather than globbing, so a re-run cannot silently destroy the eleven irreplaceable ones.
+**`extract-testdata.sh` enumerates what it may overwrite.** Twelve of the 29 fixtures are refreshable from a live cluster; the other seventeen are derived, hand-captured, synthetic, or captured on an older kgateway line — states the cluster cannot be made to produce on demand. The script lists those twelve explicitly rather than globbing, so a re-run cannot silently destroy the eleven irreplaceable ones.
 
 **It ignores volatile fields when deciding whether to rewrite a fixture.** Two change for reasons unrelated to kgateway's behaviour, and would otherwise dirty every tracked fixture whenever the demo cluster is rebuilt:
 

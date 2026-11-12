@@ -1,0 +1,31 @@
+# Derived from healthy.yaml: metadata.generation bumped to 2 while both
+# conditions keep observedGeneration: 1.
+apiVersion: gateway.kgateway.dev/v1alpha1
+kind: DirectResponse
+metadata:
+  generation: 2
+  name: dr-healthy
+  namespace: httpbin
+spec:
+  status: 418
+status:
+  ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: demo-gateway
+        namespace: httpbin
+      conditions:
+        - lastTransitionTime: "2026-10-07T08:17:06Z"
+          message: Policy accepted
+          observedGeneration: 1
+          reason: Valid
+          status: "True"
+          type: Accepted
+        - lastTransitionTime: "2026-10-07T08:17:06Z"
+          message: Attached to all targets
+          observedGeneration: 1
+          reason: Attached
+          status: "True"
+          type: Attached
+      controllerName: kgateway.dev/kgateway

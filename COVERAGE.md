@@ -8,6 +8,18 @@ One behaviour changed. A policy whose target does not exist now gets a synthetic
 
 The other 10 live captures came back byte-identical, apart from volatile fields. `lp-target-missing` was named `lp-unattached` during the v2.4.5 probe; the sections below use the current name.
 
+## A DirectResponse with no status
+
+A `DirectResponse` has no `targetRefs`. An `HTTPRoute` rule references it through an `ExtensionRef` filter, and kgateway writes its `Accepted`/`Attached` ancestors only once such a route is attached to a kgateway Gateway. With no ancestors from our controller, the check reports **Healthy** with "No attachment status reported by kgateway.dev/kgateway". The policy kinds keep reporting Progressing in the same situation.
+
+Why the exception:
+
+- An unused `DirectResponse` is config, not pending work. A maintenance page kept in Git, or one defined before its route, is legitimate.
+- Progressing would stall a multi-step sync. ArgoCD waits for a Progressing resource before applying the next wave, so a `DirectResponse` placed before the route that uses it would never let that route deploy.
+- argo-cd's bundled Crossplane check does the same for referenced config kinds that never get conditions, such as `ProviderConfig`.
+
+What it does not mean: Healthy here proves no acceptance, attachment or working traffic. It also can't see a stuck controller. An owned ancestor that is pending, stale or missing conditions still reads Progressing, and a rejection still reads Degraded. kgateway before v2.3 never reports `DirectResponse` status ([kgateway#13647](https://github.com/kgateway-dev/kgateway/pull/13647)), so there every `DirectResponse` takes this path. The six boundary cases are fixtures under `healthchecks/lua/DirectResponse/testdata/`.
+
 ## CRD spec fields (Step 1)
 
 - ListenerPolicy: `default, perPort, targetRefs, targetSelectors`
@@ -41,7 +53,7 @@ All three write `status.ancestors[]` with `controllerName: kgateway.dev/kgateway
    - The error is per target, not per policy: `bcp-healthy` stays Accepted+Attached True while `coverage-backend` itself is `Accepted=False/Invalid` because of its sibling.
 2. **Contrast between two reference fields.** A missing Secret in BackendConfigPolicy `tls.secretRef` and a missing Service in ListenerPolicy `accessLog[].grpcService.backendRef` are rejected (`Invalid`). A missing ConfigMap in ListenerPolicy `clientCertificateValidation.caCertificateRefs` is **accepted** (`Valid`/`Attached`). Two reference-type fields, two behaviours. Whether that is a kgateway bug is not decided here.
 3. **Port 8082 is reserved by kgateway.** A Gateway listener on 8082 came out `Programmed=False/Invalid` with `invalid port 8082 in listener: port is reserved`; a ListenerPolicy targeting it got no status at all. Avoid 8082 in any extension of this demo.
-4. **Unattached and unreferenced resources get no status** (`lp-target-missing`, `dr-unreferenced`): the controller writes ancestors only once something attaches. That looks correct, not a bug. The health script must treat an absent status as Progressing. On v2.5.1 this still holds for `dr-unreferenced`, but a missing policy target now reports `TargetNotFound`.
+4. **Unattached and unreferenced resources get no status** (`lp-target-missing`, `dr-unreferenced`): the controller writes ancestors only once something attaches. That looks correct, not a bug. For the policy kinds the health script treats an absent status as Progressing. `DirectResponse` is the exception; see "A DirectResponse with no status" below. On v2.5.1 `dr-unreferenced` still gets no status, but a missing policy target now reports `TargetNotFound`.
 5. **Degraded is reachable for ListenerPolicy** (accesslog backendRef) and BackendConfigPolicy. For DirectResponse, no Degraded was reached with the single mechanism tried.
 6. **`kgw-coverage` is Synced/Degraded**, not Healthy. The Degraded comes from the *existing* Backend and Gateway health checks seeing `Backend/coverage-backend` (policy error) and `Gateway/coverage-gateway-log` (policy error). The three new kinds have no health check yet and show blank health (`BackendConfigPolicy`, `DirectResponse`, `ListenerPolicy` resources all have empty health in the Application resource list). `kgw-demo` is Synced/Healthy; `kgw-scenarios` is Synced/Degraded.
 
