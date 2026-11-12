@@ -127,6 +127,8 @@ These three have no check, each for a different reason. If one of them shows no 
 
 ## What each health state means
 
+This section is the summary. The full mapping from kgateway status to ArgoCD health, kind by kind, is in the appendix [HEALTH-MODEL.md](HEALTH-MODEL.md).
+
 The checks read only conditions written by the kgateway controller (`controllerName: kgateway.dev/kgateway`); status written by other controllers is ignored. The message on the badge is taken from the kgateway condition, so it normally says what is wrong.
 
 A distribution built on kgateway may register a different controller name. There, the policy kinds see no ancestors they own and stay `Progressing` forever. Set `CONTROLLER` in `healthchecks/lua/ancestors/health.lua` to that name and re-run `hack/render-packages.sh`. `Backend` doesn't filter by controller, so it is unaffected.

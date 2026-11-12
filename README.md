@@ -11,6 +11,7 @@ Tracks [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 | If you want to… | Go to |
 |---|---|
 | **Use the health checks** in your own ArgoCD | [docs/INSTALL.md](docs/INSTALL.md) — a ConfigMap patch, no dependency on this repo |
+| **Understand how a verdict is reached**, kind by kind | [docs/HEALTH-MODEL.md](docs/HEALTH-MODEL.md) — the in-depth appendix |
 | **Run the demo** | [DEMO.md](DEMO.md) — after `./setup.sh` below |
 | **Work on the checks**, regenerate fixtures, or run the test harness | the rest of this page |
 | See the phase plan and what is deliberately out of scope | [ROADMAP.md](ROADMAP.md) |
@@ -29,7 +30,7 @@ Tracks [kgateway#13871](https://github.com/kgateway-dev/kgateway/issues/13871).
 | `out/` | Gitignored scratch. A drop-in-ready `resource_customizations/` tree assembled for an argo-cd clone. |
 | `env.sh` | Every external version and identifier, in one place. |
 | `.github/workflows/` | CI: the generated-file check and the argo-cd Lua harness, both cluster-free. |
-| `docs/` | [INSTALL.md](docs/INSTALL.md), the `evidence/` transcripts behind its claims, and `superpowers/` — the canonical design spec and phase plans. |
+| `docs/` | [INSTALL.md](docs/INSTALL.md), its in-depth appendix [HEALTH-MODEL.md](docs/HEALTH-MODEL.md), the `evidence/` transcripts behind its claims, and `superpowers/` — the canonical design spec and phase plans. |
 
 **Where a document lives tells you who it is for.** `docs/INSTALL.md` is the only one written for someone who will never clone this repo: they want health checks in their own ArgoCD and nothing else. Everything in the root assumes you have the repo checked out and are running or working on the demo — [DEMO.md](DEMO.md) (running it), [COVERAGE.md](COVERAGE.md) (what status each coverage resource actually produced), [SCENARIOS.md](SCENARIOS.md) (the deliberately broken resources), [ROADMAP.md](ROADMAP.md) and [OPEN_TASKS.md](OPEN_TASKS.md). `hack/README.md` sits with the scripts it describes.
 
