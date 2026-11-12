@@ -38,7 +38,7 @@ git clone https://github.com/DuncanDoyle/kgateway-argocd-healthchecks.git
 cd kgateway-argocd-healthchecks
 
 # Check out the released version; `main` may move.
-git checkout v0.0.1
+git checkout v0.2.0
 
 # This file contains Lua that will run inside your ArgoCD. Read it first.
 less healthchecks/argocd-cm-patch.yaml
@@ -49,7 +49,7 @@ kubectl -n argocd patch configmap argocd-cm \
   --patch-file healthchecks/argocd-cm-patch.yaml
 ```
 
-Without cloning, download it from the release: `curl -sLO https://github.com/DuncanDoyle/kgateway-argocd-healthchecks/releases/download/v0.0.1/argocd-cm-patch.yaml`. Either way, review the file before applying it: it is Lua executed by your ArgoCD application controller.
+Without cloning, download it from the release: `curl -sLO https://github.com/DuncanDoyle/kgateway-argocd-healthchecks/releases/download/v0.2.0/argocd-cm-patch.yaml`. Either way, review the file before applying it: it is Lua executed by your ArgoCD application controller.
 
 ArgoCD reads `argocd-cm` live, so nothing needs restarting. But **Applications cache per-resource health and do not re-evaluate it when `argocd-cm` changes**; badges stay blank until the next reconcile, which can be minutes away. Force it:
 
@@ -65,7 +65,7 @@ Overrides in `argocd-cm` take precedence over anything ArgoCD later bundles, so 
 
 ### Route B — argo-helm values
 
-`healthchecks/argocd-helm-values.yaml` carries the same five scripts shaped as chart values, under `configs.cm`. Without cloning: `curl -sLO https://github.com/DuncanDoyle/kgateway-argocd-healthchecks/releases/download/v0.0.1/argocd-helm-values.yaml`. Review it first — it is Lua that will run inside your application controller.
+`healthchecks/argocd-helm-values.yaml` carries the same five scripts shaped as chart values, under `configs.cm`. Without cloning: `curl -sLO https://github.com/DuncanDoyle/kgateway-argocd-healthchecks/releases/download/v0.2.0/argocd-helm-values.yaml`. Review it first — it is Lua that will run inside your application controller.
 
 Then pick whichever matches how your ArgoCD is deployed.
 
