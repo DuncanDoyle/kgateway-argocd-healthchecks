@@ -1,55 +1,62 @@
 # How health is decided (in depth)
 
-This is the technical appendix to [`INSTALL.md`](INSTALL.md). It explains how the checks turn the status kgateway writes into an ArgoCD health state, and where that mapping stops.
+This is the technical appendix to [`INSTALL.md`](INSTALL.md). It explains how ArgoCD's health states map to the Gateway API and kgateway status the checks read, and where that mapping stops.
 
 ## ArgoCD's health states
 
-| State | What ArgoCD means by it | Effect on the Application | Effect in a multi-step sync |
-|---|---|---|---|
-| `Healthy` | Working as intended | None | The next step may start |
-| `Progressing` | Not there yet, may get there | The Application shows `Progressing`, unless something is `Degraded` | The next step waits |
-| `Degraded` | Failed | The Application shows `Degraded` | The sync fails |
-| none | No health check for the kind | Ignored | Never waits |
+| State | Meaning | In a multi-step sync |
+|---|---|---|
+| `Healthy` | Working as intended | The next step may start |
+| `Progressing` | Not there yet, may get there | The next step waits |
+| `Degraded` | Failed | The sync fails |
+| none | No health check for the kind | Never waits |
 
-The Application shows its worst resource. A sync has multiple steps when it has more than one wave, a PostSync hook, or an actual `PruneLast` prune. The last step does not wait for health. The section "Sync waves" in `INSTALL.md` covers ordering.
+An Application shows its worst resource health, ignoring hooks. A sync is multi-step when it has more than one wave or phase (PreSync, PostSync), or an actual `PruneLast` prune. The last step does not wait for the health of its plain resources, but hooks are always waited on. "Sync waves" in `INSTALL.md` covers ordering.
 
 ## Which check covers which kind
 
-| Group | Kinds | Check | Status it reads |
-|---|---|---|---|
-| `gateway.networking.k8s.io` | `Gateway`, `HTTPRoute`, `GRPCRoute`, and more per release | Bundled with ArgoCD: 3 kinds in 3.3, 5 in 3.5, 7 in 3.6, none in 2.x or 3.0 | Gateway API status |
-| `gateway.kgateway.dev` | `TrafficPolicy`, `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse` | This repo, `ancestors` script | `status.ancestors[].conditions[]` |
-| `gateway.kgateway.dev` | `Backend` | This repo, `conditions` script | `status.conditions[]` |
-| `gateway.kgateway.dev` | `GatewayExtension`, `GatewayParameters` | None | kgateway writes no status ([kgateway#14792](https://github.com/kgateway-dev/kgateway/issues/14792); `GatewayParameters` status is unimplemented) |
+| Kinds | Check | Status it reads |
+|---|---|---|
+| `Gateway`, `HTTPRoute`, `GRPCRoute` (ArgoCD 3.1+), more kinds in later releases | Bundled with ArgoCD | Gateway API status (below) |
+| `TrafficPolicy`, `ListenerPolicy`, `BackendConfigPolicy`, `DirectResponse` | `ancestors` (this repo) | `status.ancestors[].conditions[]` |
+| `Backend` | `conditions` (this repo) | `status.conditions[]` |
+| `GatewayExtension`, `GatewayParameters` | none | kgateway writes no status ([kgateway#14792](https://github.com/kgateway-dev/kgateway/issues/14792)); `GatewayParameters` status is unimplemented |
+| `HTTPListenerPolicy` (v2.4.x only) | none | Deprecated in favour of `ListenerPolicy`, and removed in v2.5 |
 
-Every script reads only `obj` and returns a verdict. It has no history and no clock: `argocd-cm` scripts get no `string`, `math` or real `os` library.
+## Gateway API kinds (ArgoCD's bundled checks)
+
+| Kind | `Degraded` | `Progressing` | `Healthy` |
+|---|---|---|---|
+| `Gateway` | `Accepted=False` or `ResolvedRefs=False`, on the Gateway or a listener | `Programmed` not `True`, on the Gateway or a listener; no status | otherwise |
+| `HTTPRoute`, `GRPCRoute` | `Accepted=False` or `ResolvedRefs=False` on a current parent | a parent with `Programmed` not `True`; no current parent; no status | at least one current parent |
+
+These checks don't filter parents by controller. The `Gateway` check ignores generations. kgateway writes `kgateway.dev/Programmed` on routes, not `Programmed`, so the route checks never see it.
 
 ## The `ancestors` script
 
-kgateway writes one ancestor per Gateway (or `Backend`) the policy reaches. Each carries `Accepted` and `Attached`. The script reads only ancestors with `controllerName: kgateway.dev/kgateway`, and evaluates every `Accepted` and `Attached` condition on them:
+kgateway writes one ancestor per Gateway or `Backend` a policy reaches, each with `Accepted` and `Attached`. When a policy's target doesn't exist (v2.5+), it writes a synthetic `StatusSummary` ancestor instead. Only ancestors with `controllerName: kgateway.dev/kgateway` count.
 
-| Condition on an owned ancestor | Verdict |
-|---|---|
-| `observedGeneration` ≠ `metadata.generation` | `Progressing` |
-| reason `Pending` (kgateway's default before it decides) | `Progressing` |
-| reason `Invalid`, `PartiallyValid`, `Overridden` or `TargetNotFound` | `Degraded` |
-| `status: False` with any other reason | `Degraded` |
-| `status: True` (`Valid`, `Attached`, `Merged`) | `Healthy` |
+Each `Accepted` or `Attached` condition on them is classified in this order:
 
-Across all owned conditions, `Degraded` beats `Progressing`, which beats `Healthy`. The first failing condition supplies the message. An empty message falls back to `<type>: <reason>`. With no owned ancestors at all, the result is `Progressing` ("Waiting for `<Kind>` status"), with one exception below.
+| # | Condition | Counts as |
+|---|---|---|
+| 1 | stale (`observedGeneration` ≠ `metadata.generation`) | `Progressing`, whatever its status |
+| 2 | reason `Pending` (kgateway's default before it decides) | `Progressing` |
+| 3 | reason `Invalid`, `PartiallyValid`, `Overridden` or `TargetNotFound` | `Degraded` |
+| 4 | `status: True` | `Healthy` |
+| 5 | `status: False`, any other reason | `Degraded` |
 
-**`DirectResponse` exception.** A `DirectResponse` has no `targetRefs`. Routes reference it through an `ExtensionRef` filter, and it gets ancestors only through a route attached to a kgateway Gateway. With no owned ancestors it reads `Healthy`, with "No attachment status reported by kgateway.dev/kgateway". An unused one is config, not pending work, and `Progressing` would stall any sync wave placed before its route. The verdict means only that nothing was reported. A referenced `DirectResponse` still waiting for reconciliation reads the same. An owned ancestor that is pending, stale or missing conditions keeps the normal verdicts.
+Then the results combine: any `Degraded` wins, then any `Progressing`, then any `Healthy`. One `True` condition is enough for `Healthy`; the script doesn't require both. With no owned ancestors, the verdict is `Progressing`, with one exception.
+
+**`DirectResponse` exception.** A `DirectResponse` has no `targetRefs`. Routes reference it through an `ExtensionRef` filter, and it gets ancestors only through a route attached to a kgateway Gateway. With no owned ancestors it reads `Healthy` ("No attachment status reported by kgateway.dev/kgateway"), because an unused one is config, not pending work, and `Progressing` would stall any sync wave placed before its route. A referenced one still waiting for reconciliation reads the same.
 
 ## The `conditions` script (`Backend`)
 
-| Condition | Verdict |
-|---|---|
-| `Accepted` or `EndpointsDiscovered` stale | `Progressing` |
-| either one `False` | `Degraded` |
-| at least one `True`, none `False` | `Healthy` |
-| neither present | `Progressing` |
+`Accepted` and `EndpointsDiscovered` are classified in this order: stale counts as `Progressing`; `False` as `Degraded`; `True` as `Healthy`. They combine as above. `EndpointsDiscovered` is a runtime condition, so a `Backend` can be `Accepted=True` and still `Degraded`.
 
-The same precedence applies: `Degraded` beats `Progressing`, which beats `Healthy`. `EndpointsDiscovered` is a runtime condition. A `Backend` can be `Accepted=True` while discovery fails, so the script reads both before deciding.
+## Messages
+
+`Degraded` and `Healthy` take the deciding condition's message. When that message is empty, the fallback is `<type>: <reason>`, `<type> is False` or `<type> is True`. `Progressing` always reads "Waiting for `<Kind>` status".
 
 ## Behaviour that depends on the kgateway version
 
@@ -57,14 +64,13 @@ The same precedence applies: `Degraded` beats `Progressing`, which beats `Health
 |---|---|---|
 | Policy whose target doesn't exist | no status → `Progressing` | `TargetNotFound` → `Degraded` |
 | Policy whose target exists but isn't attached | no status → `Progressing` | same |
-| `DirectResponse` used by an attached route | ancestors → normal verdicts | same |
 | `DirectResponse` used by nothing | no status → `Healthy` | same |
 
-Before v2.3.0, kgateway wrote no `DirectResponse` status at all ([kgateway#13647](https://github.com/kgateway-dev/kgateway/pull/13647)), so every `DirectResponse` reads `Healthy` there. Fixtures cover v2.4.5 and v2.5.1; earlier versions are not tested.
+Before v2.3.0 kgateway wrote no `DirectResponse` status at all ([kgateway#13647](https://github.com/kgateway-dev/kgateway/pull/13647)), so every `DirectResponse` reads `Healthy` there. The fixtures cover v2.4.5 and v2.5.1.
 
 ## What the checks cannot see
 
 - **What kgateway doesn't report.** A `ListenerPolicy` whose `caCertificateRefs` names a missing ConfigMap is `Accepted=True`, so it reads `Healthy`.
-- **Other controllers.** Ancestors from any controller other than `kgateway.dev/kgateway` are ignored, including failures. A build of kgateway that registers another controller name needs `CONTROLLER` changed in `healthchecks/lua/ancestors/health.lua`.
-- **A stuck controller.** The checks are stateless, so they can't tell "not reconciled yet" from "never will be". Both read `Progressing`, except for an unused `DirectResponse`, which reads `Healthy`.
-- **Traffic.** `Healthy` means kgateway accepted and attached the resource. It doesn't mean requests succeed.
+- **Other controllers.** Ancestors from other controllers are ignored, including their failures. A kgateway build with another controller name needs `CONTROLLER` changed in `healthchecks/lua/ancestors/health.lua`. The `conditions` script doesn't filter by controller.
+- **Time.** A script sees one object and keeps no memory between evaluations. `os.time()` exists, but without the `string` library a script on the `argocd-cm` path can't parse a timestamp. So a stuck controller looks the same as one that hasn't reconciled yet.
+- **Traffic.** `Healthy` means the status the check reads meets the rules above. It doesn't prove attachment, and it doesn't prove requests succeed.
